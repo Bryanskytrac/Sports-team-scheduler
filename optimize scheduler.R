@@ -4,6 +4,7 @@ library('tidyverse')
 getwd()
 setwd("C:/R_Script_Data/Optimize Scheduler")
 
+
 # all_matches_import <- read_csv("tbl_All_Possible_Matchups.csv") # replaced data import with hard coded lists and crossing function
 
 ## Generate list of all possible team matchups ##
