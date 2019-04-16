@@ -16,43 +16,33 @@ team_matchups_all <- filter(team_matchups_all, HomeTeam != AwayTeam)
 team_matchups_all <-rowid_to_column(team_matchups_all, var="matchID") #add matchID column as index for matching later
 
 ## Five week schedule, games starting from 6p to 10p, with 3 ball fields ##
-# all_game_slots_import <- read_csv("tbl_All_Games.csv") #Not used currently
-# all_game_slots_import2 <- read.csv("Q_All_Standard_Time_Games_v2mod.csv") # replaced data import with hard coded lists and crossing function
-# summary(all_matches_import)
-# summary(all_game_slots_import2)
 
-GameWeeks_t <- tibble(GameWeekNum = c("Week 01", "Week 02","Week 03","Week 04", "Week 05","Week 06"))
-GameHours_t <- tibble(HourOfGame = c(6,7,8,9,10)) # the 10pm games could be added here if desired
-GameBallFields_t <- tibble(BallFieldNum = c("F1","F2","F3"))
+# GameWeeks_t <- tibble(GameWeekNum = c("Week 01", "Week 02","Week 03","Week 04", "Week 05","Week 06")) # 6 week game option
+GameWeeks_t <- tibble(GameWeekNum = c("Week 01", "Week 02","Week 03","Week 04", "Week 05"))
+GameHours_t <- tibble(HourOfGame = c(6,7,8,9,10)) # other game times could be added here 
+GameBallFields_t <- tibble(BallFieldNum = c("F1","F2","F3")) # generic IDs for ball fields
 
 game_slots_all <- crossing(GameWeeks_t,GameHours_t,GameBallFields_t)
-game_slots_all <- filter(game_slots_all,HourOfGame != 10) # remove all of the 10pm games
-game_slots_all <- bind_rows(game_slots_all,crossing(GameWeeks_t[1:3,],GameHours_t[5,],GameBallFields_t[1,])) # adds the 3 pre-agreed 10pm games
+# game_slots_all <- filter(game_slots_all,HourOfGame != 10) # remove all of the 10pm games
+# game_slots_all <- bind_rows(game_slots_all,crossing(GameWeeks_t[1:3,],GameHours_t[5,],GameBallFields_t[1,])) # adds the 3 pre-agreed 10pm games
 
 game_slots_all <- rowid_to_column(game_slots_all, var = "GameSlotID") #add GameSlotID column as index for matching later
 
 
-# matches_selected <- sample_n(all_matches_import,0) #Creates empty tibble
+
 matches_selected <- sample_n(team_matchups_all,0) #Creates tibble with no rows
-#teamNum <- c('01','02','03','04','05','06','07','08','09','10','11','12','13','14','15') #not needed now with full team names
 
-
-# teams_t <- (all_matches_import %>% group_by(AwayTeam) %>% summarise(awayCount=n()))[,1]
-away_teams_t <- (team_matchups_all %>% group_by(AwayTeam) %>% summarise(awayCount=n()))[,1]
-
-# away_games_counter <- tibble(teams_t, awayCount = 0) #this is to initialize the tibble
-away_games_counter <- add_column(away_teams_t, awayCount = 0) #this is to initialize the tibble
-
+away_teams_t <- (team_matchups_all %>% group_by(AwayTeam) %>% summarise(awayCount=n()))[,1] #creates away teams list as tibble
+away_games_counter <- add_column(away_teams_t, awayCount = 0) #create away games count tibble & initialize game count
 
 
 ## Begin loop section
-# iNum <- 4 # this line is for use in testing
+# iNum <- 1 # this line is for use in testing
 
-for (iNum in 1:15) {
+for (iNum in seq_along(teamList)) #teamList has been 15
+  {
 
   print(iNum)
-  # cur_team_Home <- filter(all_matches_import, HomeTeam == paste0('Team ',teamNum[iNum]))
-  # cur_team_Home <- filter(all_matches_import, HomeTeam == teamList[iNum]) #use new variable instead of imported
   cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
   # print(cur_team_Home)
   away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
@@ -79,8 +69,6 @@ for (iNum in 1:15) {
 ## one final pass for last case
 
 print(iNum)
-# cur_team_Home <- filter(all_matches_import, HomeTeam == paste0('Team ',teamNum[iNum]))
-# cur_team_Home <- filter(all_matches_import, HomeTeam == teamList[iNum])
 cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
 # print(cur_team_Home)
 away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
@@ -106,6 +94,19 @@ matches_selected <- rowid_to_column(matches_selected, var = "SelectedMatchID") #
 
 ## End match selection section
 
+
+######### WORKING DRAFT  SECTION ##############
+
+########## now to put the selected matches into different slots
+
+game_slots_filled <- game_slots_all %>%
+  add_column(SelectedMatchID = NA) # add the SelectedMatchID column (foreign key for team_matchups_all)
+
+matches_selected %>% 
+  select(SelectedMatchID) %>%
+  sample_n(74) # this randomly samples the matches selected. I think I could use it to randomize the matchups into their gameslots.
+  
+sample_n(team_matchups_all,75)
 
 
 ############### Extras
