@@ -1,4 +1,4 @@
-# sports-team-scheduler version 0.2 #
+# sports-team-scheduler version 0.3 #
 
 library('tidyverse')
 getwd()
@@ -30,83 +30,87 @@ game_slots_all <- rowid_to_column(game_slots_all, var = "GameSlotID") #add GameS
 
 
 
-matches_selected <- sample_n(team_matchups_all,0) #Creates tibble with no rows
+matches_selected <- sample_n(team_matchups_all,0) %>% 
+  bind_rows(as.data.frame(vector(mode = "integer",nrow(game_slots_all)))) %>%
+  select(matchID, HomeTeam,AwayTeam) #creates tibble with correct number of game slots
 
-away_teams_t <- (team_matchups_all %>% group_by(AwayTeam) %>% summarise(awayCount=n()))[,1] #creates away teams list as tibble
-away_games_counter <- add_column(away_teams_t, awayCount = 0) #create away games count tibble & initialize game count
-
-
-## Begin loop section
-# iNum <- 1 # this line is for use in testing
-
-for (iNum in seq_along(teamList)) #teamList has been 15
-  {
-
-  print(iNum)
-  cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
-  # print(cur_team_Home)
-  away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
-  # print(away_games_shortjoin)
-  cur_team_Home_short <- cur_team_Home %>% inner_join(away_games_shortjoin)
-  # print(cur_team_Home_short)
-
-  
-  if (iNum == 1) matches_selected <- sample_n(cur_team_Home,5) else {
-    if (length(pull(cur_team_Home_short[,'AwayTeam']))<5) { 
-      matches_selected <- bind_rows(matches_selected, cur_team_Home_short)} else 
-    matches_selected <- bind_rows(matches_selected, sample_n(cur_team_Home_short,5))}
-  # print(matches_selected)
-  
-  away_games_counter <- (matches_selected %>% group_by(AwayTeam) %>% summarise(awayCount=n()))
-  away_games_counter <- right_join(away_games_counter, away_teams_t)
-  away_games_counter <- replace_na(away_games_counter, list(awayCount=0))
-  # print(away_games_counter)
-  
-  
-
-} # end of for loop
-
-## one final pass for last case
-
-print(iNum)
-cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
-# print(cur_team_Home)
-away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
-# print(away_games_shortjoin)
-cur_team_Home_short <- cur_team_Home %>% inner_join(away_games_shortjoin)
-# print(cur_team_Home_short)
-
-
-if (iNum == 1) matches_selected <- sample_n(cur_team_Home,5) else {
-  if (length(pull(cur_team_Home_short[,'AwayTeam']))<5) { 
-    matches_selected <- bind_rows(matches_selected, cur_team_Home_short)} else 
-      matches_selected <- bind_rows(matches_selected, sample_n(cur_team_Home_short,5))}
-# print(matches_selected)
-
-away_games_counter <- (matches_selected %>% group_by(AwayTeam) %>% summarise(awayCount=n()))
-away_games_counter <- right_join(away_games_counter, away_teams_t)
-away_games_counter <- replace_na(away_games_counter, list(awayCount=0))
-# print(away_games_counter)
-# print((matches_selected %>% group_by(HomeTeam) %>% summarise(HomeCount=n()))) # Counts how many home games for each team
-# matches_selected <- inner_join(matches_selected[,1:4], away_games_counter, by = c("AwayTeam")) #updates away game counts
-
-matches_selected <- rowid_to_column(matches_selected, var = "SelectedMatchID") #add GameSlotID column as index for matching later
-
-## End match selection section
-
+# this tibble will likely be the main output of this script
+scheduled_games <- game_slots_all %>%
+  bind_cols(matches_selected) # creates tibble with all game slots and corresponding match information
 
 ######### WORKING DRAFT  SECTION ##############
 
-########## now to put the selected matches into different slots
+#output scheduled games 
+write_excel_csv(scheduled_games,str_replace_all(paste0("output_schedule_", Sys.time(),".csv"),":|[[:space:]]","_" ))
 
-game_slots_filled <- game_slots_all %>%
-  add_column(SelectedMatchID = NA) # add the SelectedMatchID column (foreign key for team_matchups_all)
 
-matches_selected %>% 
-  select(SelectedMatchID) %>%
-  sample_n(74) # this randomly samples the matches selected. I think I could use it to randomize the matchups into their gameslots.
-  
-sample_n(team_matchups_all,75)
+
+ ###### SECTION KEPT FOR REFERENCE BUT WILL LIKELY NOT BE USED #####
+# away_teams_t <- (team_matchups_all %>% group_by(AwayTeam) %>% summarise(awayCount=n()))[,1] #creates away teams list as tibble
+# away_games_counter <- add_column(away_teams_t, awayCount = 0) #create away games count tibble & initialize game count
+# 
+# 
+# ## Begin loop section
+# # iNum <- 1 # this line is for use in testing
+# 
+# for (iNum in seq_along(teamList)) #teamList has been 15
+#   {
+# 
+#   print(iNum)
+#   cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
+#   # print(cur_team_Home)
+#   away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
+#   # print(away_games_shortjoin)
+#   cur_team_Home_short <- cur_team_Home %>% inner_join(away_games_shortjoin)
+#   # print(cur_team_Home_short)
+# 
+#   
+#   if (iNum == 1) matches_selected <- sample_n(cur_team_Home,5) else {
+#     if (length(pull(cur_team_Home_short[,'AwayTeam']))<5) { 
+#       matches_selected <- bind_rows(matches_selected, cur_team_Home_short)} else 
+#     matches_selected <- bind_rows(matches_selected, sample_n(cur_team_Home_short,5))}
+#   # print(matches_selected)
+#   
+#   away_games_counter <- (matches_selected %>% group_by(AwayTeam) %>% summarise(awayCount=n()))
+#   away_games_counter <- right_join(away_games_counter, away_teams_t)
+#   away_games_counter <- replace_na(away_games_counter, list(awayCount=0))
+#   # print(away_games_counter)
+#   
+#   
+# 
+# } # end of for loop
+# 
+# ## one final pass for last case
+# 
+# print(iNum)
+# cur_team_Home <- filter(team_matchups_all, HomeTeam == teamList[iNum])
+# # print(cur_team_Home)
+# away_games_shortjoin <- filter(away_games_counter, awayCount < 5)
+# # print(away_games_shortjoin)
+# cur_team_Home_short <- cur_team_Home %>% inner_join(away_games_shortjoin)
+# # print(cur_team_Home_short)
+# 
+# 
+# if (iNum == 1) matches_selected <- sample_n(cur_team_Home,5) else {
+#   if (length(pull(cur_team_Home_short[,'AwayTeam']))<5) { 
+#     matches_selected <- bind_rows(matches_selected, cur_team_Home_short)} else 
+#       matches_selected <- bind_rows(matches_selected, sample_n(cur_team_Home_short,5))}
+# # print(matches_selected)
+# 
+# away_games_counter <- (matches_selected %>% group_by(AwayTeam) %>% summarise(awayCount=n()))
+# away_games_counter <- right_join(away_games_counter, away_teams_t)
+# away_games_counter <- replace_na(away_games_counter, list(awayCount=0))
+# # print(away_games_counter)
+# # print((matches_selected %>% group_by(HomeTeam) %>% summarise(HomeCount=n()))) # Counts how many home games for each team
+# # matches_selected <- inner_join(matches_selected[,1:4], away_games_counter, by = c("AwayTeam")) #updates away game counts
+# 
+# matches_selected <- rowid_to_column(matches_selected, var = "SelectedMatchID") #add GameSlotID column as index for matching later
+# 
+# ## End match selection section
+# 
+# 
+
+
 
 
 ############### Extras
